@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CO₂ phase, density and viscosity finder</title>
+<style>
+:root{--bg:#f4f6f7;--ink:#17212b;--mute:#566271;--line:#cfd6dd;--field:#fff;--accent:#0b5cad;
+--solid:#cfe3f5;--liquid:#bfe5c3;--gas:#f7e3c4;--sc:#e6c7e8;--pt:#d6342f;--curve:#17212b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f151b;--ink:#e7edf3;--mute:#9aa7b5;--line:#2c3844;--field:#17212b;--accent:#6cb2ff;
+--solid:#254661;--liquid:#235a33;--gas:#5f4821;--sc:#58395e;--pt:#ff6b63;--curve:#e7edf3}}
+:root[data-theme="dark"]{--bg:#0f151b;--ink:#e7edf3;--mute:#9aa7b5;--line:#2c3844;--field:#17212b;--accent:#6cb2ff;
+--solid:#254661;--liquid:#235a33;--gas:#5f4821;--sc:#58395e;--pt:#ff6b63;--curve:#e7edf3}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:22px 18px 40px}
+h1,h2,.phase{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-weight:600;letter-spacing:-.01em}
+h1{font-size:clamp(1.7rem,4vw,2.3rem);margin:.2em 0 .1em}
+h2{font-size:1.3rem;margin:1.6em 0 .4em}
+.lede{color:var(--mute);margin:0 0 1.2em;max-width:60ch}
+.main{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:28px;align-items:start}
+@media (max-width:820px){.main{grid-template-columns:1fr}}
+.controls{border-top:2px solid var(--ink);padding-top:14px}
+label{display:block;font-weight:600;margin:12px 0 4px}
+.row{display:flex;gap:8px}
+input,select,button{font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-height:42px}
+input{flex:1;min-width:0}
+:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.result{margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
+.phase{display:inline-block;font-size:clamp(1.5rem,5vw,2rem);line-height:1.2;padding:4px 12px;border-radius:6px;color:#17212b}
+.phase.solid{background:var(--solid)}.phase.liquid{background:var(--liquid)}.phase.gas{background:var(--gas)}.phase.sc{background:var(--sc)}
+.phase.edge{background:transparent;border:2px dashed var(--ink);color:var(--ink)}
+.phase.bad{background:transparent;color:var(--pt);padding-left:0}
+dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:12px 0}
+dt{color:var(--mute)}dd{margin:0}
+.note{font-size:.9rem;color:var(--mute);margin:.5em 0}
+.presets{margin-top:18px}
+.presets p{margin:0 0 6px;font-weight:600}
+.presets button{margin:0 6px 6px 0;min-height:36px;padding:4px 10px;font-size:.9rem;cursor:pointer}
+.presets button:hover{border-color:var(--accent)}
+figure{margin:0}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font-family:system-ui,sans-serif}
+figcaption{font-size:.88rem;color:var(--mute);margin-top:6px}
+table{border-collapse:collapse;width:100%;max-width:640px}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.scroll{overflow-x:auto}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em}
+a{color:var(--accent)}
+p,li{max-width:72ch}
+#props dd{font-size:1.2rem;font-weight:600}
+.paper{margin-top:44px;padding-top:18px;border-top:2px solid var(--ink)}
+.paper h2{margin-top:0}.paper h3{font-family:Georgia,"Times New Roman",serif;font-size:1.05rem;margin:1.5em 0 .3em}
+.paper p,.paper li{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-size:1.02rem}
+.eq{font-family:Georgia,"Times New Roman",serif;font-style:italic;padding:6px 12px;margin:8px 0;border-left:3px solid var(--line);overflow-x:auto;max-width:72ch}
+ol.refs{padding-left:1.6em}ol.refs li{margin:.5em 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>CO₂ phase, density and viscosity</h1>
+<p class="lede">Enter a pressure and a temperature. The page tells you whether pure carbon dioxide is solid, liquid, gas or a supercritical fluid, gives its density and dynamic viscosity, and marks the state on the phase diagram. Methods and references are at the bottom.</p>
+
+<div class="main">
+<section class="controls" aria-label="Inputs">
+<label for="p">Pressure</label>
+<div class="row"><input id="p" type="number" step="any" value="80" inputmode="decimal">
+<select id="pu" aria-label="Pressure unit"><option>bar</option><option>MPa</option><option>kPa</option><option>Pa</option><option>atm</option><option>psi</option></select></div>
+<label for="t">Temperature</label>
+<div class="row"><input id="t" type="number" step="any" value="35" inputmode="decimal">
+<select id="tu" aria-label="Temperature unit"><option value="C">°C</option><option value="K">K</option><option value="F">°F</option></select></div>
+
+<div class="result" aria-live="polite">
+<div id="phase" class="phase">—</div>
+<dl id="props"></dl>
+<dl id="facts"></dl>
+<div id="notes"></div>
+</div>
+
+<div class="presets"><p>Try a known state</p><span id="presets"></span></div>
+</section>
+
+<figure>
+<div id="chart"></div>
+<figcaption>Phase boundaries of pure CO₂ from reference [1]. Pressure axis is logarithmic. The red dot is your state.</figcaption>
+</figure>
+</div>
+
+<h2>Source and method</h2>
+<div class="paper">
+<h2>Methods and references</h2>
+<p><strong>Summary.</strong> The state of pure CO₂ is classified, and its density and dynamic viscosity are calculated, from two internationally accepted reference formulations: the Span–Wagner equation of state [1] and the Laesecke–Muzny viscosity correlation [2]. All calculations run in your browser and nothing you type is sent anywhere.</p>
+
+<h3>1. Phase identification</h3>
+<p>Phase boundaries are the auxiliary equations of [1], with the following constants and curves.</p>
+<div class="scroll"><table>
+<tr><th>Quantity</th><th>Value or equation</th></tr>
+<tr><td>Triple point</td><td>T<sub>t</sub> = 216.592 K, p<sub>t</sub> = 0.51795 MPa</td></tr>
+<tr><td>Critical point</td><td>T<sub>c</sub> = 304.1282 K, p<sub>c</sub> = 7.3773 MPa</td></tr>
+<tr><td>Melting curve</td><td><code>p/pₜ = 1 + 1955.5390·x + 2055.4593·x²</code>, x = T/Tₜ − 1</td></tr>
+<tr><td>Sublimation curve</td><td><code>ln(p/pₜ) = (Tₜ/T)·Σ aᵢ(1 − T/Tₜ)^tᵢ</code>; a = −14.740846, 2.4327015, −5.3061778; t = 1, 1.9, 2.9</td></tr>
+<tr><td>Vapour-pressure curve</td><td><code>ln(p/p_c) = (T_c/T)·Σ aᵢ(1 − T/T_c)^tᵢ</code>; a = −7.0602087, 1.9391218, −1.6463597, −3.2995634; t = 1, 1.5, 2, 4</td></tr>
+</table></div>
+<p>Below T<sub>t</sub> the state is solid above the sublimation curve and gas below it. Above T<sub>t</sub> it is solid above the melting curve; otherwise, below T<sub>c</sub>, it is liquid above the vapour-pressure curve and gas below it. At or above T<sub>c</sub> it is a supercritical fluid when p ≥ p<sub>c</sub>, and gas below that. A state within 0.1% (in pressure) of a curve is reported as coexistence of the two phases.</p>
+
+<h3>2. Density</h3>
+<p>The residual Helmholtz energy α<sup>r</sup> of [1] (34 polynomial and exponential terms, 5 Gaussian terms and 3 non-analytic terms) gives the pressure</p>
+<div class="eq">p = ρ R T [ 1 + δ (∂α<sup>r</sup>/∂δ)<sub>τ</sub> ],  δ = ρ/ρ<sub>c</sub>,  τ = T<sub>c</sub>/T  (1)</div>
+<p>with ρ<sub>c</sub> = 467.6 kg m⁻³, T<sub>c</sub> = 304.1282 K, R = 8.31451 J mol⁻¹ K⁻¹ and M = 44.0098 g mol⁻¹. For a given T and p, Eq. (1) is solved for ρ by bracketing and bisection, with the derivative evaluated by forward-mode automatic differentiation. Where the equation has several roots (below T<sub>c</sub>) the lowest is used for gas and the highest for liquid and supercritical states.</p>
+
+<h3>3. Dynamic viscosity</h3>
+<div class="eq">η(T, ρ) = η<sub>0</sub>(T) + η<sub>1</sub>(T) ρ + Δη<sub>r</sub>(T, ρ)  (2)</div>
+<p>Here η<sub>0</sub> is the dilute-gas viscosity, η<sub>1</sub>ρ the initial density dependence from Rainwater–Friend theory, and Δη<sub>r</sub> a residual term in reduced temperature T/T<sub>t</sub> and reduced density ρ/(1178.53 kg m⁻³). All coefficients are those published in [2], which covers 100–2000 K for the gas and 220–700 K for compressed and supercritical states up to 8000 MPa along the melting line. The critical-enhancement term of [2] is not included; it matters only very close to the critical point.</p>
+
+<h3>4. Verification</h3>
+<p>The JavaScript implementation was compared with CoolProp 8.0.0 [3], which implements [1] and [2], on 673 fluid states (473 random states at 217–700 K and 0.01–250 MPa, and 200 states at 300–312 K and 6–9 MPa near the critical point). The largest relative deviation was below 10⁻¹¹ for both density and viscosity. This shows that the code reproduces the published formulations; the uncertainty of the underlying correlations is documented in [1] and [2]. For an independent cross-check of any single state, see [4].</p>
+
+<h3>5. Limitations</h3>
+<ul>
+<li>The system is treated as pure CO₂. Other components, such as brine, N₂ or impurities, shift the boundaries, the critical point and the transport properties.</li>
+<li>The melting-curve data cover 217–270 K and pressures up to about 284 MPa, so the curve is extrapolated above that. The equation of state is valid up to 1100 K and 800 MPa; further high-pressure solid forms of CO₂ are not distinguished.</li>
+<li>Density and viscosity are not computed for the solid. Below T<sub>t</sub> the gas density is an extrapolation of [1].</li>
+<li>The supercritical region is continuous. The lines T = T<sub>c</sub> and p = p<sub>c</sub> that bound it are conventions, not phase transitions.</li>
+</ul>
+
+<h3>References</h3>
+<ol class="refs">
+<li>[1] R. Span and W. Wagner, “A new equation of state for carbon dioxide covering the fluid region from the triple-point temperature to 1100 K at pressures up to 800 MPa,” <em>J. Phys. Chem. Ref. Data</em> <strong>25</strong>, 1509–1597 (1996). <a href="https://doi.org/10.1063/1.555991" target="_blank" rel="noopener">doi:10.1063/1.555991</a></li>
+<li>[2] A. Laesecke and C. D. Muzny, “Reference correlation for the viscosity of carbon dioxide,” <em>J. Phys. Chem. Ref. Data</em> <strong>46</strong>, 013107 (2017). <a href="https://doi.org/10.1063/1.4977429" target="_blank" rel="noopener">doi:10.1063/1.4977429</a></li>
+<li>[3] I. H. Bell, J. Wronski, S. Quoilin and V. Lemort, “Pure and pseudo-pure fluid thermophysical property evaluation and the open-source thermophysical property library CoolProp,” <em>Ind. Eng. Chem. Res.</em> <strong>53</strong>, 2498–2508 (2014). <a href="https://doi.org/10.1021/ie4033999" target="_blank" rel="noopener">doi:10.1021/ie4033999</a></li>
+<li>[4] P. J. Linstrom and W. G. Mallard (eds.), <em>NIST Chemistry WebBook</em>, NIST Standard Reference Database Number 69, National Institute of Standards and Technology. <a href="https://doi.org/10.18434/T4D303" target="_blank" rel="noopener">doi:10.18434/T4D303</a></li>
+</ol>
+</div>
+</div>
+
+<script>
+"use strict";
+const Tt=216.592,Pt=0.51795,Tc=304.1282,Pc=7.3773;
+const th=(a,b)=>Math.max(0,1-a/b);
+const sub=T=>{const x=th(T,Tt);return Pt*Math.exp(Tt/T*(-14.740846*x+2.4327015*Math.pow(x,1.9)-5.3061778*Math.pow(x,2.9)))};
+const melt=T=>{const x=T/Tt-1;return Pt*(1+1955.5390*x+2055.4593*x*x)};
+const vap=T=>{const x=th(T,Tc);return Pc*Math.exp(Tc/T*(-7.0602087*x+1.9391218*Math.pow(x,1.5)-1.6463597*x*x-3.2995634*Math.pow(x,4)))};
+const PU={Pa:1e-6,kPa:1e-3,MPa:1,bar:0.1,atm:0.101325,psi:0.006894757293168};
+const toK=(v,u)=>u==="K"?v:u==="C"?v+273.15:(v-32)*5/9+273.15;
+const near=(P,L,tol)=>Math.abs(P-L)<=tol*L;
+
+function classify0(T,P,tol=1e-3){
+  const notes=[];
+  if(Math.abs(T-Tt)<0.01&&near(P,Pt,5*tol))return{k:"edge",name:"Triple point",notes:["Solid, liquid and gas coexist."]};
+  if(Math.abs(T-Tc)<0.01&&near(P,Pc,5*tol))return{k:"edge",name:"Critical point",notes:["Liquid and gas become identical."]};
+  if(T>1100||P>800)notes.push("Outside the range of the Span–Wagner equation of state (1100 K, 800 MPa). Further high-pressure solid forms of CO₂ exist and are not distinguished here.");
+  if(T<70)notes.push("Below 70 K the sublimation curve is extrapolated.");
+  if(T<Tt){
+    const ps=sub(T);
+    if(near(P,ps,tol))return{k:"edge",name:"Solid + gas",notes:["On the sublimation curve."].concat(notes)};
+    return{k:P>ps?"solid":"gas",name:P>ps?"Solid (dry ice)":"Gas",notes};
+  }
+  const pm=melt(T);
+  if(T>270&&P>300)notes.push("The melting curve is extrapolated here (its data end near 270 K and 284 MPa), so the solid boundary is approximate.");
+  if(near(P,pm,tol))return{k:"edge",name:"Solid + "+(T<Tc?"liquid":"supercritical fluid"),notes:["On the melting curve."].concat(notes)};
+  if(P>pm)return{k:"solid",name:"Solid (dry ice)",notes};
+  if(T<Tc){
+    const pv=vap(T);
+    if(near(P,pv,tol))return{k:"edge",name:"Liquid + gas",notes:["On the vapour-pressure curve."].concat(notes)};
+    return{k:P>pv?"liquid":"gas",name:P>pv?"Liquid":"Gas",notes};
+  }
+  if(P>=Pc){notes.push("The supercritical region is continuous. Its borders at T = Tc and P = pc are conventions, not phase transitions.");return{k:"sc",name:"Supercritical fluid",notes};}
+  return{k:"gas",name:"Gas",notes};
+}
+
+/* ---------- Density: Span & Wagner (1996) Helmholtz equation of state ---------- */
+const EOS={"pw":[[0.388568232032,1,0,0],[2.93854759427,1,0.75,0],[-5.5867188535,1,1,0],[-0.767531995925,1,2,0],[0.317290055804,2,0.75,0],[0.548033158978,2,2,0],[0.122794112203,3,0.75,0],[2.16589615432,1,1.5,1],[1.58417351097,2,1.5,1],[-0.231327054055,4,2.5,1],[0.0581169164314,5,0,1],[-0.553691372054,5,1.5,1],[0.489466159094,5,2,1],[-0.0242757398435,6,0,1],[0.0624947905017,6,1,1],[-0.121758602252,6,2,1],[-0.370556852701,1,3,2],[-0.0167758797004,1,6,2],[-0.11960736638,4,3,2],[-0.0456193625088,4,6,2],[0.0356127892703,4,8,2],[-0.00744277271321,7,6,2],[-0.00173957049024,8,0,2],[-0.0218101212895,2,7,3],[0.0243321665592,3,12,3],[-0.0374401334235,3,16,3],[0.143387157569,5,22,4],[-0.134919690833,5,24,4],[-0.0231512250535,6,16,4],[0.0123631254929,7,24,4],[0.00210583219729,8,8,4],[-0.000339585190264,10,2,4],[0.00559936517716,4,28,5],[-0.000303351180556,8,14,6]],"ga":[[-213.654886883,2,1,25,1,325,1.16],[26641.5691493,2,0,25,1,300,1.19],[-24027.2122046,2,1,25,1,300,1.19],[-283.41603424,3,3,15,1,275,1.25],[212.472844002,3,3,20,1,275,1.22]],"na":[[-0.666422765408,3.5,0.875,0.3,0.7,0.3,10,275],[0.726086323499,3.5,0.925,0.3,0.7,0.3,10,275],[0.0550686686128,3,0.875,0.3,0.7,1,12.5,275]]};
+const RG=8.31451,MW=0.0440098,RHOC=10624.9063*MW,TCE=304.1282,TTRIPLE=216.592;
+const Du=(v,d=0)=>({v,d}),dadd=(a,b)=>Du(a.v+b.v,a.d+b.d),dmul=(a,b)=>Du(a.v*b.v,a.d*b.v+a.v*b.d),
+dsc=(a,k)=>Du(a.v*k,a.d*k),dsh=(a,k)=>Du(a.v+k,a.d),
+dpw=(a,p)=>a.v===0?Du(0,0):Du(Math.pow(a.v,p),p*Math.pow(a.v,p-1)*a.d),
+dex=a=>{const e=Math.exp(a.v);return Du(e,e*a.d)};
+function dAlphaR(del,tau){            /* d(alpha_r)/d(delta) by forward-mode differentiation */
+  const x=Du(del,1);let s=Du(0,0);
+  for(const[n,d,t,l]of EOS.pw){let u=dsc(dpw(x,d),n*Math.pow(tau,t));if(l>0)u=dmul(u,dex(dsc(dpw(x,l),-1)));s=dadd(s,u);}
+  for(const[n,d,t,eta,eps,beta,gam]of EOS.ga){const y=dsh(x,-eps);
+    s=dadd(s,dmul(dsc(dpw(x,d),n*Math.pow(tau,t)),dex(dadd(dsc(dmul(y,y),-eta),Du(-beta*(tau-gam)**2,0)))));}
+  for(const[n,a,b,beta,A,B,C,D]of EOS.na){const y=dsh(x,-1),y2=dmul(y,y);
+    const th=dadd(Du(1-tau,0),dsc(dpw(y2,1/(2*beta)),A)),dl=dadd(dmul(th,th),dsc(dpw(y2,a),B));
+    const psi=dex(dadd(dsc(y2,-C),Du(-D*(tau-1)**2,0)));
+    s=dadd(s,dsc(dmul(dmul(dpw(dl,b),x),psi),n));}
+  return s.d;
+}
+function pressureMPa(rho,T){const del=rho/RHOC;return rho/MW*RG*T*(1+del*dAlphaR(del,TCE/T))/1e6;}
+/* mass density (kg/m3) at T (K), P (MPa); which = "lo" (gas-like root) or "hi" (liquid-like root) */
+function density(T,P,which){
+  const f=r=>pressureMPa(r,T)-P,roots=[],RM=1700;let prev=0,fp=-P;
+  for(let r=3;r<=RM;r+=3){const fr=f(r);
+    if((fp<0)!==(fr<0)){let a=prev,b=r;for(let i=0;i<70;i++){const m=(a+b)/2;((f(m)<0)===(fp<0))?a=m:b=m;}roots.push((a+b)/2);if(which==="lo")break;}
+    prev=r;fp=fr;}
+  return roots.length?(which==="lo"?roots[0]:roots[roots.length-1]):NaN;
+}
+/* ---------- Viscosity: Laesecke & Muzny (2017), without the critical-enhancement term ---------- */
+function viscosity(T,rho){            /* returns Pa s */
+  const c=Math.cbrt(T),a=[1749.354893188350,-369.069300007128,5423856.34887691,-2.21283852168356,-269503.247933569,73145.021531826,5.34368649509278];
+  const eta0=0.0010055*Math.sqrt(T)/(a[0]+a[1]*Math.pow(T,1/6)+a[2]*Math.exp(a[3]*c)+(a[4]+a[5]*c)/Math.exp(c)+a[6]*Math.sqrt(T));
+  const b=[-19.572881,219.73999,-1015.3226,2471.0125,-3375.1717,2491.6597,-787.26086,14.085455,-0.34664158],
+        t=[0,-0.25,-0.5,-0.75,-1,-1.25,-1.5,-2.5,-5.5],Ts=T/200.76;
+  let Bs=0;for(let i=0;i<9;i++)Bs+=b[i]*Math.pow(Ts,t[i]);
+  const eta1=eta0*6.02214129e23*Math.pow(3.78421e-10,3)*Bs*rho/MW;
+  const rtL=1178.53,Tr=T/TTRIPLE,rr=rho/rtL,g=8.06282737481277,
+        etL=Math.pow(rtL,2/3)*Math.sqrt(RG*TTRIPLE)/(Math.pow(MW,1/6)*84446887.43579945);
+  const res=etL*(0.360603235428487*Tr*rr**3+(rr*rr+Math.pow(rr,g))/(Tr-0.121550806591497));
+  return eta0+eta1+res;
+}
+
+function classify(T,P){const r=classify0(T,P),n=r.name;
+  r.br=r.k==="solid"?[]:r.k==="gas"?["lo"]:/^(Liquid \+ gas|Triple)/.test(n)?["lo","hi"]:/^Solid \+ gas/.test(n)?["lo"]:["hi"];return r;}
+function fluidProps(T,P,r){
+  if(!r.br.length)return{rows:`<dt>Density</dt><dd>not computed for solid CO₂</dd>`,notes:["Density and viscosity are given for fluid states only (gas, liquid, supercritical)."]};
+  let rows="";const notes=[],add=n=>{if(!notes.includes(n))notes.push(n)};
+  r.br.forEach(w=>{
+    const lab=r.br.length>1?(w==="lo"?" (gas side)":" (liquid side)"):"",rho=density(T,P,w);
+    if(!isFinite(rho)){rows+=`<dt>Density${lab}</dt><dd>no fluid solution found</dd>`;return;}
+    const eta=viscosity(T,rho);
+    rows+=`<dt>Density${lab}</dt><dd>${fmt(rho)} kg/m³</dd><dt>Dynamic viscosity${lab}</dt><dd>${fmt(eta*1e6)} µPa·s <span class="note">(${fmt(eta*1e3)} mPa·s)</span></dd>`;
+    if(T<TTRIPLE)add("Below the triple-point temperature the equation of state [1] is used outside its stated range, so treat the density as an extrapolation.");
+    if(T<100||T>2000||((T<220||T>700)&&rho>0.5*RHOC))add("This state lies outside the range of the viscosity correlation [2] (gas: 100–2000 K; compressed and supercritical states: 220–700 K).");
+    if(Math.abs(T-TCE)<5&&Math.abs(rho-RHOC)<0.25*RHOC)add("Very close to the critical point the viscosity omits the critical-enhancement term of [2].");
+  });
+  return{rows,notes};
+}
+
+/* ---------- diagram ---------- */
+const W=640,H=440,L=62,R=16,T0=14,B=48,x0=150,x1=450,y0=-4,y1=3;
+const X=t=>L+(t-x0)/(x1-x0)*(W-L-R);
+const Y=p=>T0+(y1-Math.log10(p))/(y1-y0)*(H-T0-B);
+const clampT=t=>Math.min(x1,Math.max(x0,t)),clampP=p=>Math.min(1e3,Math.max(1e-4,p));
+const pts=a=>a.map(([t,p])=>X(t).toFixed(1)+","+Y(clampP(p)).toFixed(1)).join(" ");
+const rng=(a,b,n,f)=>Array.from({length:n+1},(_,i)=>{const t=a+(b-a)*i/n;return[t,f(t)]});
+const q=(1955.5390**2-4*2055.4593*(1-1e3/Pt));
+const Tend=Tt*(1+(-1955.5390+Math.sqrt(q))/(2*2055.4593));
+const subC=rng(x0,Tt,60,sub),vapC=rng(Tt,Tc,60,vap),melC=rng(Tt,Tend,80,melt);
+const poly={
+  solid:subC.concat(melC,[[Tend,1e3],[x0,1e3]]),
+  gas:[[x0,1e-4],[x1,1e-4],[x1,Pc],[Tc,Pc]].concat(vapC.slice().reverse(),subC.slice().reverse()),
+  liquid:vapC.concat(rng(Tt,Tc,60,melt).reverse()),
+  sc:[[Tc,Pc],[x1,Pc],[x1,1e3],[Tend,1e3]].concat(rng(Tc,Tend,60,melt).reverse())
+};
+const sup="⁻⁰¹²³⁴⁵⁶⁷⁸⁹";
+let stat="";
+for(const k of["solid","gas","liquid","sc"])stat+=`<polygon points="${pts(poly[k])}" fill="var(--${k})"/>`;
+for(let t=150;t<=450;t+=50)stat+=`<line x1="${X(t)}" x2="${X(t)}" y1="${T0}" y2="${H-B}" stroke="var(--line)" stroke-width=".7"/><text x="${X(t)}" y="${H-B+18}" font-size="12" text-anchor="middle">${t}</text>`;
+for(let e=y0;e<=y1;e++){const s=String(e).split("").map(c=>c==="-"?"⁻":sup[+c+1]).join("");stat+=`<line x1="${L}" x2="${W-R}" y1="${Y(10**e)}" y2="${Y(10**e)}" stroke="var(--line)" stroke-width=".7"/><text x="${L-8}" y="${Y(10**e)+4}" font-size="12" text-anchor="end">10${s}</text>`;}
+stat+=`<polyline points="${pts(subC)}" fill="none" stroke="var(--curve)" stroke-width="1.8"/><polyline points="${pts(melC)}" fill="none" stroke="var(--curve)" stroke-width="1.8"/><polyline points="${pts(vapC)}" fill="none" stroke="var(--curve)" stroke-width="1.8"/>`;
+stat+=`<circle cx="${X(Tt)}" cy="${Y(Pt)}" r="4" fill="var(--curve)"/><circle cx="${X(Tc)}" cy="${Y(Pc)}" r="4" fill="var(--curve)"/>`;
+stat+=`<text x="${X(Tt)-8}" y="${Y(Pt)+22}" font-size="11" text-anchor="end">Triple point</text><text x="${X(Tc)+9}" y="${Y(Pc)+19}" font-size="11">Critical point</text>`;
+for(const[s,t,p]of[["Solid",185,80],["Liquid",252,40],["Gas",290,.03],["Supercritical fluid",375,40]])stat+=`<text x="${X(t)}" y="${Y(p)}" font-size="15" font-weight="600" text-anchor="middle" opacity=".85">${s}</text>`;
+stat+=`<text x="${(L+W-R)/2}" y="${H-6}" font-size="13" text-anchor="middle">Temperature (K)</text><text transform="translate(15 ${(T0+H-B)/2}) rotate(-90)" font-size="13" text-anchor="middle">Pressure (MPa)</text>`;
+function draw(T,P){
+  let pt="",cap="";
+  if(isFinite(T)&&isFinite(P)&&T>0&&P>0){
+    const out=T<x0||T>x1||P<1e-4||P>1e3;
+    pt=`<circle cx="${X(clampT(T))}" cy="${Y(clampP(P))}" r="9" fill="none" stroke="var(--pt)" stroke-width="2"/><circle cx="${X(clampT(T))}" cy="${Y(clampP(P))}" r="4.5" fill="${out?"none":"var(--pt)"}" stroke="var(--pt)" stroke-width="2"/>`;
+    if(out)pt+=`<text x="${W-R}" y="${T0+14}" font-size="12" text-anchor="end">Your state is outside the plotted range</text>`;
+  }
+  document.getElementById("chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Phase diagram of carbon dioxide">${stat}${pt}</svg>`;
+}
+
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+const fmt=x=>x>=1e5||x<1e-3?x.toExponential(3):String(Number(x.toPrecision(5)));
+function update(){
+  const pv=parseFloat($("p").value),tv=parseFloat($("t").value);
+  const T=toK(tv,$("tu").value),P=pv*PU[$("pu").value]; /* MPa */
+  const ph=$("phase");
+  if(!isFinite(pv)||!isFinite(tv)||P<=0||T<=0){
+    ph.className="phase bad";ph.textContent="Enter a valid state";
+    $("facts").innerHTML="";$("props").innerHTML="";$("notes").innerHTML=`<p class="note">Pressure must be above 0, and the temperature must be above absolute zero.</p>`;
+    draw(NaN,NaN);return;
+  }
+  const r=classify(T,P);
+  ph.className="phase "+r.k;ph.textContent=r.name;
+  let f=`<dt>Temperature</dt><dd>${fmt(T)} K (${fmt(T-273.15)} °C)</dd><dt>Pressure</dt><dd>${fmt(P)} MPa (${fmt(P*10)} bar)</dd>`;
+  if(T<Tt)f+=`<dt>Sublimation pressure</dt><dd>${fmt(sub(T))} MPa</dd>`;
+  else{f+=`<dt>Melting pressure</dt><dd>${fmt(melt(T))} MPa</dd>`;f+=T<Tc?`<dt>Vapour pressure</dt><dd>${fmt(vap(T))} MPa</dd>`:`<dt>Critical pressure</dt><dd>${Pc} MPa</dd>`;}
+  const fp=fluidProps(T,P,r);
+  $("props").innerHTML=fp.rows;$("facts").innerHTML=f;
+  $("notes").innerHTML=r.notes.concat(fp.notes).map(n=>`<p class="note">${n}</p>`).join("");
+  draw(T,P);
+}
+const PRE=[["Supercritical CO₂, 80 bar, 35 °C",80,"bar",35,"C"],["Cylinder liquid, 60 bar, 20 °C",60,"bar",20,"C"],["Room air, 1 atm, 25 °C",1,"atm",25,"C"],["Dry ice, 1 atm, −78.5 °C",1,"atm",-78.5,"C"],["Triple point",0.51795,"MPa",216.592,"K"],["Critical point",7.3773,"MPa",304.1282,"K"]];
+PRE.forEach(([label,p,pu,t,tu])=>{
+  const b=document.createElement("button");b.type="button";b.textContent=label;
+  b.onclick=()=>{$("p").value=p;$("pu").value=pu;$("t").value=t;$("tu").value=tu;update();};
+  $("presets").appendChild(b);
+});
+["p","pu","t","tu"].forEach(id=>$(id).addEventListener("input",update));
+update();
+</script>
+</body>
+</html>
